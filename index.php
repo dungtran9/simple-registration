@@ -1,131 +1,101 @@
-<!DOCTYPE HTML>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-    <style>
-        .error {
-            color: #FF0000;
-        }
-        table{
-            border-collapse: collapse;
-            width: 100%;
-        }
-        td, th{
-            border: solid 1px #ccc;
-        }
-        form{
-            width: 450px;
-        }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
 </head>
 <body>
+<form method="post">
+    <h2>Login</h2>
+    Username: <input type="text" name="username" placeholder="username"/>
+    <br>
+    Password: <input type="password" name="password" placeholder="password"/>
+    <br>
+    <input name="act" type="submit" value="Login"/>
+    <input name="act" type="submit" value="Register"/>
+</form>
+</body>
+</html>
 <?php
 
-function loadRegistrations($filename){
-    $jsondata = file_get_contents($filename);
-    $arr_data = json_decode($jsondata, true);
-    return $arr_data;
-}
-
-function saveDataJSON($filename, $name, $email, $phone)
-{
-    try {
-        $contact = array(
-            'name' => $name,
-            'email' => $email,
-            'phone' => $phone
-        );
-
-        $arr_data = loadRegistrations($filename);
-
-        array_push($arr_data, $contact);
-
-        $jsondata = json_encode($arr_data, JSON_PRETTY_PRINT);
-
-        file_put_contents($filename, $jsondata);
-        echo "Lưu dữ liệu thành công!";
-    } catch (Exception $e) {
-        echo 'Lỗi: ', $e->getMessage(), "\n";
-    }
-}
-
-$nameErr = NULL;
-$emailErr = NULL;
-$phoneErr = NULL;
-$name = NULL;
-$email = NULL;
-$phone = NULL;
-
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $name = $_POST["name"];
-    $email = $_POST["email"];
-    $phone = $_POST["phone"];
-    $has_error = false;
-
-    if (empty($name)) {
-        $nameErr = "Tên đăng nhập không được để trống!";
-        $has_error = true;
-    }
-
-    if (empty($email)) {
-        $emailErr = "Email không được để trống!";
-        $has_error = true;
-    } else {
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $emailErr = "Định dạng email sai (xxx@xxx.xxx.xxx)!";
-            $has_error = true;
+$path = "data.json";
+$arrayList = getData($path);
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $u = $_POST['username'];
+    $p = $_POST['password'];
+    if($_POST['act'] == 'Login')
+    {
+        if (checkUser($u,$p)) {
+            echo "Chao Mung " . $u;
+//            header("Location: index.php");
+        } else {
+            echo "Tai khoan k hop le, nhap lai";
         }
     }
 
-    if (empty($phone)) {
-        $phoneErr = " Số điện thoại không được để trống!";
-        $has_error = true;
+    else if($_POST['act'] == 'Register')
+    {
+//        header("Location: register.php");
+        $user = [
+            'username' => $u,
+            'password' => $p
+        ];
+        if(checkAvailable($u,$p)){
+            addUser($user);
+            echo "Dang ky thanh cong";
+
+        }else{
+            echo "Thong tin khong hop le " . $u . " da ton tai.";
+        }
+
     }
 
-    if ($has_error === false) {
-        saveDataJSON("data.json", $name, $email, $phone);
-        $name = NULL;
-        $email = NULL;
-        $phone = NULL;
-    }
 }
 
-?>
+function checkAvailable($u,$p){
+    if($u == "" || $p = "") return false;
+    $arr = $GLOBALS['arrayList'];
+    foreach ($arr as $index => $value) {
+        if($value->username == $u){
+            return false;
+        }
+    }
 
-<h2>Registration Form</h2>
-<form method="post">
-    <fieldset>
-        <legend>Details</legend>
-        Name: <input type="text" name="name" value="<?php echo $name; ?>">
-        <span class="error">* <?php echo $nameErr; ?></span>
-        <br><br>
-        E-mail: <input type="text" name="email" value="<?php echo $email; ?>">
-        <span class="error">* <?php echo $emailErr; ?></span>
-        <br><br>
-        Phone: <input type="text" name="phone" value="<?php echo $phone; ?>">
-        <span class="error">*<?php echo $phoneErr; ?></span>
-        <br><br>
-        <input type="submit" name="submit" value="Register">
-        <p><span class="error">* required field.</span></p>
-    </fieldset>
-</form>
+    return true;
 
-<?php
-$registrations = loadRegistrations('data.json');
-?>
-<h2>Registration list</h2>
-<table>
-    <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Phone</th>
-    </tr>
-    <?php foreach ($registrations as $registration): ?>
-        <tr>
-            <td><?= $registration['name']; ?></td>
-            <td><?= $registration['email']; ?></td>
-            <td><?= $registration['phone']; ?></td>
-        </tr>
-    <?php endforeach; ?>
-</table>
-</body>
-</html>
+}
+
+function checkUser($user, $password)
+{
+    $arr = $GLOBALS['arrayList'];
+    foreach ($arr as $index => $value) {
+        if($value->username == $user && $value->password == $password){
+            return true;
+        }
+    }
+    return false;
+}
+
+
+function getAllUsers($filePath){
+    return getData($filePath);
+}
+
+function getData($filePath) {
+    $dataJson = file_get_contents($filePath);
+    return json_decode($dataJson);
+}
+
+function addUser($user){
+    $users = $GLOBALS['arrayList'];
+    array_push($users, $user);
+    saveData($users);
+}
+
+function saveData($data){
+    $jsonData = json_encode($data);
+    file_put_contents("data.json",$jsonData);
+}
